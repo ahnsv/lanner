@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useStructuredPrompt } from "@ahnopologetic/use-prompt-api/react"
 import { z } from "zod"
 
@@ -16,10 +16,47 @@ export default function Playground() {
     const [input, setInput] = useState("")
     const [result, setResult] = useState<any>(null)
 
-    const { prompt, ready, loading, error, quota } = useStructuredPrompt({
+    // improved debug states
+    const [capabilityStatus, setCapabilityStatus] = useState<string>("unknown")
+    const [downloadProgress, setDownloadProgress] = useState<number>(0)
+    const [isDownloading, setIsDownloading] = useState(false)
+
+    const { prompt, ready, loading, error } = useStructuredPrompt({
         schema: eventSchema,
         systemPrompt: `You are a helpful calendar assistant. The current time is ${new Date().toISOString()}.`
     })
+
+    useEffect(() => {
+        checkCapabilities()
+    }, [])
+
+    const checkCapabilities = async () => {
+        try {
+            const availability = await LanguageModel.availability()
+            setCapabilityStatus(availability)
+        } catch (e) {
+            setCapabilityStatus(`Error checking caps: ${e.message}`)
+        }
+    }
+
+    const handleDownloadModel = async () => {
+        setIsDownloading(true)
+        try {
+            await LanguageModel.create({
+                monitor(m) {
+                    m.addEventListener("downloadprogress", (e: any) => {
+                        console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`)
+                        setDownloadProgress(e.loaded / e.total)
+                    })
+                },
+            })
+            setCapabilityStatus("readily")
+        } catch (e) {
+            setCapabilityStatus(`Download failed: ${e.message}`)
+        } finally {
+            setIsDownloading(false)
+        }
+    }
 
     const handleGenerate = async () => {
         if (!input.trim()) return
@@ -37,16 +74,42 @@ export default function Playground() {
 
                 <div className="plasmo-mb-4 plasmo-p-4 plasmo-bg-blue-50 plasmo-rounded-lg">
                     <p className="plasmo-font-semibold">
-                        Status: {ready ? "Ready" : "Initializing..."}
+                        Library Status: {ready ? "Ready" : "Initializing..."}
                     </p>
-                    {quota && (
-                        <p className="plasmo-text-sm plasmo-text-gray-600">
-                            Quota: {quota.uleft} left
-                        </p>
-                    )}
+                    <div className="plasmo-mt-2 plasmo-text-sm plasmo-text-gray-700">
+                        <p><strong>Browser Capability:</strong> {capabilityStatus}</p>
+
+                        {/* Show download interface if not ready */}
+                        {capabilityStatus !== "readily" && capabilityStatus !== "unknown" && (
+                            <div className="plasmo-mt-2">
+                                <p className="plasmo-text-amber-600 plasmo-mb-1">
+                                    {capabilityStatus === "no"
+                                        ? "Model not available (try downloading anyway)"
+                                        : "Model needs download."}
+                                </p>
+                                {isDownloading ? (
+                                    <div className="plasmo-w-full plasmo-bg-gray-200 plasmo-rounded-full plasmo-h-2.5">
+                                        <div
+                                            className="plasmo-bg-blue-600 plasmo-h-2.5 plasmo-rounded-full plasmo-transition-all"
+                                            style={{ width: `${downloadProgress * 100}%` }}
+                                        ></div>
+                                        <p className="plasmo-text-xs plasmo-mt-1">{Math.round(downloadProgress * 100)}%</p>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleDownloadModel}
+                                        className="plasmo-px-3 plasmo-py-1 plasmo-bg-blue-600 plasmo-text-white plasmo-text-xs plasmo-rounded hover:plasmo-bg-blue-700"
+                                    >
+                                        Download Model
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
                     {error && (
-                        <p className="plasmo-text-sm plasmo-text-red-600">
-                            Error: {error.message}
+                        <p className="plasmo-text-sm plasmo-text-red-600 plasmo-mt-2">
+                            Library Error: {error.message}
                         </p>
                     )}
                 </div>
@@ -75,6 +138,6 @@ export default function Playground() {
                     </div>
                 )}
             </div>
-        </div>
+        </div >
     )
 }

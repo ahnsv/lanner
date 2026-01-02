@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { CalendarPlus, X, Mic, Send, Check, Loader2, RefreshCcw } from "lucide-react"
+import { CalendarPlus, X, Mic, Send, Check, Loader2, RefreshCcw, Download } from "lucide-react"
 import { useStructuredPrompt } from "@ahnopologetic/use-prompt-api/react"
 import { z } from "zod"
 
@@ -22,6 +22,11 @@ export default function CalendarOverlay() {
     const [status, setStatus] = useState<"idle" | "generating" | "review" | "creating" | "success" | "error">("idle")
     const [errorMessage, setErrorMessage] = useState("")
 
+    // Model download states
+    const [capabilityStatus, setCapabilityStatus] = useState<string>("unknown")
+    const [downloadProgress, setDownloadProgress] = useState<number>(0)
+    const [isDownloading, setIsDownloading] = useState(false)
+
     const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition()
 
     const { prompt, ready, loading: aiLoading } = useStructuredPrompt({
@@ -29,23 +34,53 @@ export default function CalendarOverlay() {
         systemPrompt: `You are a helpful calendar assistant. The current time is ${new Date().toISOString()}.`
     })
 
+    useEffect(() => {
+        checkCapabilities()
+    }, [])
+
     // Sync speech transcript to text input
     useEffect(() => {
         if (transcript) {
-            // Append new transcript to input or replace? 
-            // For now, let's just append or replace if empty
-            // Actually simpler to just rely on user editing it if it's wrong
             setTextInput((prev) => prev ? prev + " " + transcript : transcript)
             resetTranscript()
         }
     }, [transcript, resetTranscript])
 
+    const checkCapabilities = async () => {
+        try {
+            const availability = await LanguageModel.availability()
+            setCapabilityStatus(availability)
+        } catch (e) {
+            setCapabilityStatus(`Error checking caps: ${e.message}`)
+        }
+    }
+
+    const handleDownloadModel = async () => {
+        setIsDownloading(true)
+        try {
+            await LanguageModel.create({
+                monitor(m) {
+                    m.addEventListener("downloadprogress", (e: any) => {
+                        console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`)
+                        setDownloadProgress(e.loaded / e.total)
+                    })
+                },
+            })
+            setCapabilityStatus("readily")
+        } catch (e) {
+            setErrorMessage(`Download failed: ${e.message}`)
+            setStatus("error")
+        } finally {
+            setIsDownloading(false)
+        }
+    }
+
     const toggleOverlay = () => {
         setIsOpen(!isOpen)
         if (!isOpen) {
-            // Reset state on open
             setGeneratedEvent(null)
             setStatus("idle")
+            checkCapabilities() // Re-check on open
         }
     }
 
@@ -57,7 +92,6 @@ export default function CalendarOverlay() {
         try {
             const result = await prompt(`Create an event plan for: ${textInput}`)
 
-            // Transform result to match CalendarEvent interface (ensure dateTime structure)
             const event: CalendarEvent = {
                 summary: result.title,
                 description: result.description,
@@ -114,7 +148,43 @@ export default function CalendarOverlay() {
                     </div>
 
                     <div className="plasmo-p-4">
-                        {status === "idle" || status === "generating" || status === "error" ? (
+                        {/* Capability Check / Download View */}
+                        {capabilityStatus !== "readily" && capabilityStatus !== "unknown" ? (
+                            <div className="plasmo-flex plasmo-flex-col plasmo-items-center plasmo-text-center plasmo-py-4 plasmo-space-y-3">
+                                <Download size={32} className="plasmo-text-blue-600" />
+                                <div>
+                                    <h3 className="plasmo-font-bold plasmo-text-gray-800">
+                                        {capabilityStatus === "no" ? "Model Not Available" : "AI Model Needed"}
+                                    </h3>
+                                    <p className="plasmo-text-sm plasmo-text-gray-500 plasmo-mt-1">
+                                        {capabilityStatus === "no"
+                                            ? "The model is not available in your browser, but you can try downloading it anyway."
+                                            : "A small AI model (Gemini Nano) needs to be downloaded to your browser."}
+                                    </p>
+                                </div>
+
+                                {isDownloading ? (
+                                    <div className="plasmo-w-full plasmo-max-w-xs plasmo-mt-2">
+                                        <div className="plasmo-bg-gray-200 plasmo-rounded-full plasmo-h-2 plasmo-w-full">
+                                            <div
+                                                className="plasmo-bg-blue-600 plasmo-h-2 plasmo-rounded-full plasmo-transition-all"
+                                                style={{ width: `${downloadProgress * 100}%` }}
+                                            ></div>
+                                        </div>
+                                        <p className="plasmo-text-xs plasmo-text-gray-600 plasmo-mt-2">
+                                            Downloading... {Math.round(downloadProgress * 100)}%
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={handleDownloadModel}
+                                        className="plasmo-px-4 plasmo-py-2 plasmo-bg-blue-600 plasmo-text-white plasmo-rounded-xl plasmo-font-medium hover:plasmo-bg-blue-700 plasmo-transition"
+                                    >
+                                        Download Model
+                                    </button>
+                                )}
+                            </div>
+                        ) : (status === "idle" || status === "generating" || status === "error" ? (
                             <>
                                 <div className="plasmo-relative">
                                     <textarea
@@ -200,24 +270,20 @@ export default function CalendarOverlay() {
                                     </>
                                 )}
                             </div>
-                        )}
+                        ))}
                     </div>
                 </div>
             )}
 
-            {/* Floating Trigger Button */}
-            <button
-                onClick={toggleOverlay}
-                className={`plasmo-flex plasmo-items-center plasmo-justify-center plasmo-w-14 plasmo-h-14 plasmo-rounded-full plasmo-shadow-xl plasmo-transition-all plasmo-duration-300 hover:plasmo-scale-110 active:plasmo-scale-95 ${isOpen
-                        ? "plasmo-bg-gray-800 plasmo-rotate-45"
-                        : "plasmo-bg-gradient-to-tr plasmo-from-blue-600 plasmo-to-purple-600"
-                    }`}
-            >
-                <CalendarPlus
-                    size={24}
-                    className={`${isOpen ? "plasmo-text-gray-400" : "plasmo-text-white"}`}
-                />
-            </button>
+            {/* Toggle Button */}
+            {!isOpen && (
+                <button
+                    onClick={toggleOverlay}
+                    className="plasmo-p-4 plasmo-bg-gradient-to-br plasmo-from-blue-600 plasmo-to-blue-700 plasmo-text-white plasmo-rounded-2xl plasmo-shadow-2xl hover:plasmo-shadow-blue-600/30 plasmo-transition-all hover:plasmo-scale-105 active:plasmo-scale-95"
+                >
+                    <CalendarPlus size={24} />
+                </button>
+            )}
         </div>
     )
 }
