@@ -42,6 +42,7 @@ export default function CalendarOverlay() {
     const { prompt, ready } = usePromptAPI({
         systemPrompt: `You are a helpful calendar assistant. 
         The current time and timezone is ${new Date().toTimeString()}.
+        The current date is ${new Date().toDateString()}.
         
         INSTRUCTIONS:
         1. Extract ONE OR MORE event details from the user's request.
@@ -197,7 +198,7 @@ export default function CalendarOverlay() {
 
                     <div className="plasmo-p-4">
                         {/* Capability Check / Download View */}
-                        {capabilityStatus !== "readily" && capabilityStatus !== "unknown" ? (
+                        {capabilityStatus !== "available" && capabilityStatus !== "unknown" ? (
                             <div className="plasmo-flex plasmo-flex-col plasmo-items-center plasmo-text-center plasmo-py-4 plasmo-space-y-3">
                                 <Download size={32} className="plasmo-text-blue-600" />
                                 <div>
