@@ -1,8 +1,8 @@
 {
-  "name": "calendar1",
-  "displayName": "Calendar1",
+  "name": "lanner",
+  "displayName": "Lanner",
   "version": "0.0.1",
-  "description": "A basic Plasmo extension.",
+  "description": "Lanner: Planner without P(roblems)",
   "author": "ahnsv <ahnsv@bc.edu>",
   "scripts": {
     "dev": "plasmo dev",
@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@ahnopologetic/use-prompt-api": "^0.1.1",
+    "framer-motion": "^11.15.0",
     "lucide-react": "^0.562.0",
     "plasmo": "0.90.5",
     "react": "18.2.0",
