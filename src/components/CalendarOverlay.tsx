@@ -9,18 +9,25 @@ import "../style.css"
 // Move schema to a constant string for the prompt
 const SCHEMA_DEF = `
 {
-  "title": "string",
-  "start": "ISO 8601 string (e.g., 2024-01-01T10:00:00)",
-  "end": "ISO 8601 string",
-  "location": "string (optional)",
-  "description": "string (optional)"
+  "events": [
+    {
+      "title": "string",
+      "start": "ISO 8601 string (e.g., 2024-01-01T10:00:00)",
+      "end": "ISO 8601 string",
+      "location": "string (optional)",
+      "description": "string (optional)"
+    }
+  ]
 }
 `
 
 export default function CalendarOverlay() {
     const [isOpen, setIsOpen] = useState(false)
     const [textInput, setTextInput] = useState("")
-    const [generatedEvent, setGeneratedEvent] = useState<CalendarEvent | null>(null)
+    // Changed to array
+    const [generatedEvents, setGeneratedEvents] = useState<CalendarEvent[]>([])
+
+    // Status can include specific count if needed, but for now simple
     const [status, setStatus] = useState<"idle" | "generating" | "review" | "creating" | "success" | "error">("idle")
     const [errorMessage, setErrorMessage] = useState("")
 
@@ -35,11 +42,9 @@ export default function CalendarOverlay() {
     const { prompt, ready } = usePromptAPI({
         systemPrompt: `You are a helpful calendar assistant. 
         The current time and timezone is ${new Date().toTimeString()}.
-        The current date is ${new Date().toDateString()}.
-        The current year is ${new Date().getFullYear()}.
         
         INSTRUCTIONS:
-        1. Extract event details from the user's request.
+        1. Extract ONE OR MORE event details from the user's request.
         2. Respond ONLY with valid JSON matching this structure:
         ${SCHEMA_DEF}
         3. Rules:
@@ -68,7 +73,7 @@ export default function CalendarOverlay() {
             const availability = await LanguageModel.availability()
             setCapabilityStatus(availability)
         } catch (e) {
-            setCapabilityStatus(`Error checking caps: ${e.message}`)
+            setCapabilityStatus("unknown")
         }
     }
 
@@ -95,7 +100,7 @@ export default function CalendarOverlay() {
     const toggleOverlay = () => {
         setIsOpen(!isOpen)
         if (!isOpen) {
-            setGeneratedEvent(null)
+            setGeneratedEvents([])
             setStatus("idle")
             checkCapabilities() // Re-check on open
         }
@@ -112,30 +117,35 @@ export default function CalendarOverlay() {
 
             // clean up markdown if present
             const cleanJson = rawResult.replace(/```json\n?|\n?```/g, "").trim()
-            const result = JSON.parse(cleanJson)
+            const result = JSON.parse(cleanJson) // Expected { events: [...] }
 
             // Validate basic structure
-            if (!result.title || !result.start || !result.end) {
-                throw new Error("Invalid parameters generated")
+            if (!result.events || !Array.isArray(result.events)) {
+                throw new Error("Invalid output format: expected 'events' array")
             }
 
             const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
-            const event: CalendarEvent = {
-                summary: result.title,
-                description: result.description,
-                location: result.location,
-                start: {
-                    dateTime: result.start,
-                    timeZone: timeZone
-                },
-                end: {
-                    dateTime: result.end,
-                    timeZone: timeZone
+            const events: CalendarEvent[] = result.events.map((evt: any) => {
+                if (!evt.title || !evt.start || !evt.end) {
+                    throw new Error("Invalid event parameters")
                 }
-            }
+                return {
+                    summary: evt.title,
+                    description: evt.description,
+                    location: evt.location,
+                    start: {
+                        dateTime: evt.start,
+                        timeZone: timeZone
+                    },
+                    end: {
+                        dateTime: evt.end,
+                        timeZone: timeZone
+                    }
+                }
+            })
 
-            setGeneratedEvent(event)
+            setGeneratedEvents(events)
             setStatus("review")
         } catch (e) {
             console.error(e)
@@ -145,15 +155,17 @@ export default function CalendarOverlay() {
     }
 
     const handleApprove = async () => {
-        if (!generatedEvent) return
+        if (generatedEvents.length === 0) return
         setStatus("creating")
         try {
-            await createEvent(generatedEvent)
+            // Create all events in parallel
+            await Promise.all(generatedEvents.map(evt => createEvent(evt)))
+
             setStatus("success")
             setTimeout(() => {
                 setIsOpen(false)
                 setTextInput("")
-                setGeneratedEvent(null)
+                setGeneratedEvents([])
                 setStatus("idle")
             }, 2000)
         } catch (e) {
@@ -163,7 +175,7 @@ export default function CalendarOverlay() {
     }
 
     const handleRetry = () => {
-        setGeneratedEvent(null)
+        setGeneratedEvents([])
         setStatus("idle")
     }
 
@@ -176,7 +188,7 @@ export default function CalendarOverlay() {
                     {/* Header */}
                     <div className="plasmo-flex plasmo-items-center plasmo-justify-between plasmo-p-4 plasmo-border-b plasmo-border-gray-100">
                         <h2 className="plasmo-font-semibold plasmo-text-gray-800">
-                            {status === "review" ? "Review Plan" : "New Event"}
+                            {status === "review" ? `Review (${generatedEvents.length})` : "New Event"}
                         </h2>
                         <button onClick={toggleOverlay} className="plasmo-p-1 plasmo-rounded-full hover:plasmo-bg-gray-100 plasmo-text-gray-500 plasmo-transition">
                             <X size={18} />
@@ -274,17 +286,20 @@ export default function CalendarOverlay() {
                                         <div className="plasmo-p-3 plasmo-bg-green-100 plasmo-rounded-full plasmo-mb-3">
                                             <Check size={32} />
                                         </div>
-                                        <p className="plasmo-font-semibold">Event Created!</p>
+                                        <p className="plasmo-font-semibold">Events Created!</p>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="plasmo-bg-gray-50 plasmo-p-4 plasmo-rounded-xl plasmo-border plasmo-border-gray-100 plasmo-space-y-2">
-                                            <h3 className="plasmo-font-bold plasmo-text-lg">{generatedEvent?.summary}</h3>
-                                            <div className="plasmo-text-sm plasmo-text-gray-600">
-                                                <p>📅 {generatedEvent?.start.dateTime ? new Date(generatedEvent.start.dateTime).toLocaleString() : ""}</p>
-                                                {generatedEvent?.location && <p>📍 {generatedEvent.location}</p>}
-                                                {generatedEvent?.description && <p>📝 {generatedEvent.description}</p>}
-                                            </div>
+                                        <div className="plasmo-max-h-60 plasmo-overflow-y-auto plasmo-space-y-2 plasmo-px-1">
+                                            {generatedEvents.map((evt, idx) => (
+                                                <div key={idx} className="plasmo-bg-gray-50 plasmo-p-4 plasmo-rounded-xl plasmo-border plasmo-border-gray-100 plasmo-space-y-1">
+                                                    <h3 className="plasmo-font-bold plasmo-text-sm">{evt.summary}</h3>
+                                                    <div className="plasmo-text-xs plasmo-text-gray-600">
+                                                        <p>📅 {evt.start.dateTime ? new Date(evt.start.dateTime).toLocaleString() : ""}</p>
+                                                        {evt.location && <p>📍 {evt.location}</p>}
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
 
                                         <div className="plasmo-flex plasmo-justify-between plasmo-gap-2">
@@ -300,7 +315,7 @@ export default function CalendarOverlay() {
                                                 className="plasmo-flex-1 plasmo-flex plasmo-items-center plasmo-justify-center plasmo-gap-2 plasmo-px-4 plasmo-py-2 plasmo-bg-green-600 hover:plasmo-bg-green-700 plasmo-text-white plasmo-rounded-xl plasmo-font-medium plasmo-shadow-lg plasmo-shadow-green-600/20 plasmo-transition-all active:plasmo-scale-95"
                                             >
                                                 {status === "creating" ? <Loader2 size={16} className="plasmo-animate-spin" /> : <Check size={16} />}
-                                                <span>Approve</span>
+                                                <span>Approve All</span>
                                             </button>
                                         </div>
                                     </>
