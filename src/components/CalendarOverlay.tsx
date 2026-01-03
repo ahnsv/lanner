@@ -181,31 +181,31 @@ export default function CalendarOverlay() {
     }
 
     return (
-        <div className="plasmo-fixed plasmo-bottom-8 plasmo-right-8 plasmo-z-50 plasmo-font-sans">
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 font-sans">
             {/* Main Modal */}
             {isOpen && (
-                <div className="plasmo-mb-4 plasmo-w-96 plasmo-bg-white/90 plasmo-backdrop-blur-xl plasmo-rounded-2xl plasmo-shadow-2xl plasmo-border plasmo-border-white/50 plasmo-overflow-hidden plasmo-animate-in plasmo-slide-in-from-bottom-10 plasmo-fade-in plasmo-duration-300">
+                <div className="mb-4 w-96 bg-white/90 backdrop-blur-xl rounded shadow-2xl border border-white/50 overflow-hidden animate-in slide-in-from-bottom-10 fade-in duration-300">
 
                     {/* Header */}
-                    <div className="plasmo-flex plasmo-items-center plasmo-justify-between plasmo-p-4 plasmo-border-b plasmo-border-gray-100">
-                        <h2 className="plasmo-font-semibold plasmo-text-gray-800">
+                    <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                        <h2 className="font-semibold text-gray-800">
                             {status === "review" ? `Review (${generatedEvents.length})` : "New Event"}
                         </h2>
-                        <button onClick={toggleOverlay} className="plasmo-p-1 plasmo-rounded-full hover:plasmo-bg-gray-100 plasmo-text-gray-500 plasmo-transition">
+                        <button onClick={toggleOverlay} className="p-1 rounded-full hover:bg-gray-100 text-gray-500 transition">
                             <X size={18} />
                         </button>
                     </div>
 
-                    <div className="plasmo-p-4">
+                    <div className="p-4">
                         {/* Capability Check / Download View */}
                         {capabilityStatus !== "available" && capabilityStatus !== "unknown" ? (
-                            <div className="plasmo-flex plasmo-flex-col plasmo-items-center plasmo-text-center plasmo-py-4 plasmo-space-y-3">
-                                <Download size={32} className="plasmo-text-blue-600" />
+                            <div className="flex flex-col items-center text-center py-4 space-y-3">
+                                <Download size={32} className="text-blue-600" />
                                 <div>
-                                    <h3 className="plasmo-font-bold plasmo-text-gray-800">
+                                    <h3 className="font-bold text-gray-800">
                                         {capabilityStatus === "no" ? "Model Not Available" : "AI Model Needed"}
                                     </h3>
-                                    <p className="plasmo-text-sm plasmo-text-gray-500 plasmo-mt-1">
+                                    <p className="text-sm text-gray-500 mt-1">
                                         {capabilityStatus === "no"
                                             ? "The model is not available in your browser, but you can try downloading it anyway."
                                             : "A small AI model (Gemini Nano) needs to be downloaded to your browser."}
@@ -213,21 +213,21 @@ export default function CalendarOverlay() {
                                 </div>
 
                                 {isDownloading ? (
-                                    <div className="plasmo-w-full plasmo-max-w-xs plasmo-mt-2">
-                                        <div className="plasmo-bg-gray-200 plasmo-rounded-full plasmo-h-2 plasmo-w-full">
+                                    <div className="w-full max-w-xs mt-2">
+                                        <div className="bg-gray-200 rounded-full h-2 w-full">
                                             <div
-                                                className="plasmo-bg-blue-600 plasmo-h-2 plasmo-rounded-full plasmo-transition-all"
+                                                className="bg-blue-600 h-2 rounded-full transition-all"
                                                 style={{ width: `${downloadProgress * 100}%` }}
                                             ></div>
                                         </div>
-                                        <p className="plasmo-text-xs plasmo-text-gray-600 plasmo-mt-2">
+                                        <p className="text-xs text-gray-600 mt-2">
                                             Downloading... {Math.round(downloadProgress * 100)}%
                                         </p>
                                     </div>
                                 ) : (
                                     <button
                                         onClick={handleDownloadModel}
-                                        className="plasmo-px-4 plasmo-py-2 plasmo-bg-blue-600 plasmo-text-white plasmo-rounded-xl plasmo-font-medium hover:plasmo-bg-blue-700 plasmo-transition"
+                                        className="px-4 py-2 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition"
                                     >
                                         Download Model
                                     </button>
@@ -235,9 +235,9 @@ export default function CalendarOverlay() {
                             </div>
                         ) : (status === "idle" || status === "generating" || status === "error" ? (
                             <>
-                                <div className="plasmo-relative">
+                                <div className="relative">
                                     <textarea
-                                        className="plasmo-w-full plasmo-h-32 plasmo-p-3 plasmo-bg-gray-50 plasmo-rounded-xl plasmo-resize-none focus:plasmo-outline-none focus:plasmo-ring-2 focus:plasmo-ring-blue-500/50 plasmo-text-gray-700 plasmo-placeholder-gray-400"
+                                        className="w-full h-32 p-3 bg-gray-50 rounded-xl resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-700 placeholder-gray-400"
                                         placeholder="Describe your event... e.g. 'Coffee with Ryan tomorrow at 10am'"
                                         value={textInput}
                                         onChange={(e) => setTextInput(e.target.value)}
@@ -245,7 +245,7 @@ export default function CalendarOverlay() {
                                     />
 
                                     <button
-                                        className={`plasmo-absolute plasmo-bottom-3 plasmo-right-3 plasmo-p-2 plasmo-rounded-full plasmo-transition-colors ${isListening ? "plasmo-bg-red-100 plasmo-text-red-600 plasmo-animate-pulse" : "plasmo-bg-white plasmo-text-gray-500 hover:plasmo-bg-gray-200"}`}
+                                        className={`absolute bottom-3 right-3 p-2 rounded-full transition-colors ${isListening ? "bg-red-100 text-red-600 animate-pulse" : "bg-white text-gray-500 hover:bg-gray-200"}`}
                                         onClick={isListening ? stopListening : startListening}
                                         disabled={status === "generating"}
                                     >
@@ -254,20 +254,20 @@ export default function CalendarOverlay() {
                                 </div>
 
                                 {status === "error" && (
-                                    <p className="plasmo-text-red-500 plasmo-text-sm plasmo-mt-2">
+                                    <p className="text-red-500 text-sm mt-2">
                                         {errorMessage || "Something went wrong."}
                                     </p>
                                 )}
 
-                                <div className="plasmo-mt-4 plasmo-flex plasmo-justify-end">
+                                <div className="mt-4 flex justify-end">
                                     <button
                                         onClick={handleGenerate}
                                         disabled={!textInput.trim() || status === "generating" || !ready}
-                                        className="plasmo-flex plasmo-items-center plasmo-gap-2 plasmo-px-4 plasmo-py-2 plasmo-bg-blue-600 hover:plasmo-bg-blue-700 disabled:plasmo-bg-blue-400 plasmo-text-white plasmo-rounded-xl plasmo-font-medium plasmo-shadow-lg plasmo-shadow-blue-600/20 plasmo-transition-all active:plasmo-scale-95"
+                                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-xl font-medium shadow-lg shadow-blue-600/20 transition-all active:scale-95"
                                     >
                                         {status === "generating" ? (
                                             <>
-                                                <Loader2 size={16} className="plasmo-animate-spin" />
+                                                <Loader2 size={16} className="animate-spin" />
                                                 <span>Thinking...</span>
                                             </>
                                         ) : (
@@ -281,21 +281,21 @@ export default function CalendarOverlay() {
                             </>
                         ) : (
                             // Review / Success State
-                            <div className="plasmo-space-y-4">
+                            <div className="space-y-4">
                                 {status === "success" ? (
-                                    <div className="plasmo-flex plasmo-flex-col plasmo-items-center plasmo-justify-center plasmo-py-8 plasmo-text-green-600">
-                                        <div className="plasmo-p-3 plasmo-bg-green-100 plasmo-rounded-full plasmo-mb-3">
+                                    <div className="flex flex-col items-center justify-center py-8 text-green-600">
+                                        <div className="p-3 bg-green-100 rounded-full mb-3">
                                             <Check size={32} />
                                         </div>
-                                        <p className="plasmo-font-semibold">Events Created!</p>
+                                        <p className="font-semibold">Events Created!</p>
                                     </div>
                                 ) : (
                                     <>
-                                        <div className="plasmo-max-h-60 plasmo-overflow-y-auto plasmo-space-y-2 plasmo-px-1">
+                                        <div className="max-h-60 overflow-y-auto space-y-2 px-1">
                                             {generatedEvents.map((evt, idx) => (
-                                                <div key={idx} className="plasmo-bg-gray-50 plasmo-p-4 plasmo-rounded-xl plasmo-border plasmo-border-gray-100 plasmo-space-y-1">
-                                                    <h3 className="plasmo-font-bold plasmo-text-sm">{evt.summary}</h3>
-                                                    <div className="plasmo-text-xs plasmo-text-gray-600">
+                                                <div key={idx} className="bg-gray-50 p-4 rounded-xl border border-gray-100 space-y-1">
+                                                    <h3 className="font-bold text-sm">{evt.summary}</h3>
+                                                    <div className="text-xs text-gray-600">
                                                         <p>📅 {evt.start.dateTime ? new Date(evt.start.dateTime).toLocaleString() : ""}</p>
                                                         {evt.location && <p>📍 {evt.location}</p>}
                                                     </div>
@@ -303,19 +303,19 @@ export default function CalendarOverlay() {
                                             ))}
                                         </div>
 
-                                        <div className="plasmo-flex plasmo-justify-between plasmo-gap-2">
+                                        <div className="flex justify-between gap-2">
                                             <button
                                                 onClick={handleRetry}
-                                                className="plasmo-flex-1 plasmo-flex plasmo-items-center plasmo-justify-center plasmo-gap-2 plasmo-px-4 plasmo-py-2 plasmo-bg-gray-100 hover:plasmo-bg-gray-200 plasmo-text-gray-700 plasmo-rounded-xl plasmo-font-medium plasmo-transition-colors"
+                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl font-medium transition-colors"
                                             >
                                                 <RefreshCcw size={16} />
                                                 <span>Retry</span>
                                             </button>
                                             <button
                                                 onClick={handleApprove}
-                                                className="plasmo-flex-1 plasmo-flex plasmo-items-center plasmo-justify-center plasmo-gap-2 plasmo-px-4 plasmo-py-2 plasmo-bg-green-600 hover:plasmo-bg-green-700 plasmo-text-white plasmo-rounded-xl plasmo-font-medium plasmo-shadow-lg plasmo-shadow-green-600/20 plasmo-transition-all active:plasmo-scale-95"
+                                                className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium shadow-lg shadow-green-600/20 transition-all active:scale-95"
                                             >
-                                                {status === "creating" ? <Loader2 size={16} className="plasmo-animate-spin" /> : <Check size={16} />}
+                                                {status === "creating" ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
                                                 <span>Approve All</span>
                                             </button>
                                         </div>
@@ -331,9 +331,10 @@ export default function CalendarOverlay() {
             {!isOpen && (
                 <button
                     onClick={toggleOverlay}
-                    className="plasmo-p-4 plasmo-bg-gradient-to-br plasmo-from-blue-600 plasmo-to-blue-700 plasmo-text-white plasmo-rounded-2xl plasmo-shadow-2xl hover:plasmo-shadow-blue-600/30 plasmo-transition-all hover:plasmo-scale-105 active:plasmo-scale-95"
+                    className="p-2 bg-white/10 backdrop-blur-md text-white rounded-full shadow-2xl hover:shadow-blue-600/30 transition-all hover:scale-105 active:scale-95 flex items-center gap-2 text-xs"
                 >
-                    <CalendarPlus size={24} />
+                    <CalendarPlus size={14} />
+                    <span>Plan Events</span>
                 </button>
             )}
         </div>

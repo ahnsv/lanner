@@ -76,39 +76,39 @@ export default function Playground() {
     }
 
     return (
-        <div className="plasmo-p-8 plasmo-bg-gray-100 plasmo-min-h-screen plasmo-font-sans">
-            <div className="plasmo-max-w-2xl plasmo-mx-auto plasmo-bg-white plasmo-p-6 plasmo-rounded-xl plasmo-shadow-lg">
-                <h1 className="plasmo-text-2xl plasmo-font-bold plasmo-mb-4">
+        <div className="p-8 bg-gray-100 min-h-screen font-sans">
+            <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-lg">
+                <h1 className="text-2xl font-bold mb-4">
                     AI Playground (use-prompt-api)
                 </h1>
 
-                <div className="plasmo-mb-4 plasmo-p-4 plasmo-bg-blue-50 plasmo-rounded-lg">
-                    <p className="plasmo-font-semibold">
+                <div className="mb-4 p-4 bg-blue-50 rounded-lg">
+                    <p className="font-semibold">
                         Library Status: {ready ? "Ready" : "Initializing..."}
                     </p>
-                    <div className="plasmo-mt-2 plasmo-text-sm plasmo-text-gray-700">
+                    <div className="mt-2 text-sm text-gray-700">
                         <p><strong>Browser Capability:</strong> {capabilityStatus}</p>
 
                         {/* Show download interface if not ready */}
                         {capabilityStatus !== "readily" && capabilityStatus !== "unknown" && (
-                            <div className="plasmo-mt-2">
-                                <p className="plasmo-text-amber-600 plasmo-mb-1">
+                            <div className="mt-2">
+                                <p className="text-amber-600 mb-1">
                                     {capabilityStatus === "no"
                                         ? "Model not available (try downloading anyway)"
                                         : "Model needs download."}
                                 </p>
                                 {isDownloading ? (
-                                    <div className="plasmo-w-full plasmo-bg-gray-200 plasmo-rounded-full plasmo-h-2.5">
+                                    <div className="w-full bg-gray-200 rounded-full h-2.5">
                                         <div
-                                            className="plasmo-bg-blue-600 plasmo-h-2.5 plasmo-rounded-full plasmo-transition-all"
+                                            className="bg-blue-600 h-2.5 rounded-full transition-all"
                                             style={{ width: `${downloadProgress * 100}%` }}
                                         ></div>
-                                        <p className="plasmo-text-xs plasmo-mt-1">{Math.round(downloadProgress * 100)}%</p>
+                                        <p className="text-xs mt-1">{Math.round(downloadProgress * 100)}%</p>
                                     </div>
                                 ) : (
                                     <button
                                         onClick={handleDownloadModel}
-                                        className="plasmo-px-3 plasmo-py-1 plasmo-bg-blue-600 plasmo-text-white plasmo-text-xs plasmo-rounded hover:plasmo-bg-blue-700"
+                                        className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
                                     >
                                         Download Model
                                     </button>
@@ -118,14 +118,14 @@ export default function Playground() {
                     </div>
 
                     {error && (
-                        <p className="plasmo-text-sm plasmo-text-red-600 plasmo-mt-2">
+                        <p className="text-sm text-red-600 mt-2">
                             Library Error: {error.message}
                         </p>
                     )}
                 </div>
 
                 <textarea
-                    className="plasmo-w-full plasmo-p-3 plasmo-border plasmo-rounded-lg plasmo-mb-4 plasmo-h-32 focus:plasmo-outline-none focus:plasmo-ring-2 focus:plasmo-ring-blue-500"
+                    className="w-full p-3 border rounded-lg mb-4 h-32 focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="e.g. Lunch with John tomorrow at 12pm..."
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
@@ -134,15 +134,15 @@ export default function Playground() {
                 <button
                     onClick={handleGenerate}
                     disabled={loading || !ready}
-                    className="plasmo-px-6 plasmo-py-2 plasmo-bg-blue-600 plasmo-text-white plasmo-rounded-lg hover:plasmo-bg-blue-700 disabled:plasmo-opacity-50 plasmo-transition-colors"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
                 >
                     {loading ? "Generating..." : "Generate Plan"}
                 </button>
 
                 {result && (
-                    <div className="plasmo-mt-6">
-                        <h2 className="plasmo-font-semibold plasmo-mb-2">Output:</h2>
-                        <pre className="plasmo-bg-gray-900 plasmo-text-green-400 plasmo-p-4 plasmo-rounded-lg plasmo-overflow-x-auto">
+                    <div className="mt-6">
+                        <h2 className="font-semibold mb-2">Output:</h2>
+                        <pre className="bg-gray-900 text-green-400 p-4 rounded-lg overflow-x-auto">
                             {JSON.stringify(result, null, 2)}
                         </pre>
                     </div>
