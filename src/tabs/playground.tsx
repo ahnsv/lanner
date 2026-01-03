@@ -23,7 +23,17 @@ export default function Playground() {
 
     const { prompt, ready, loading, error } = useStructuredPrompt({
         schema: eventSchema,
-        systemPrompt: `You are a helpful calendar assistant. The current time is ${new Date().toISOString()}.`
+        systemPrompt: `You are a helpful calendar assistant. 
+        The current date is ${new Date().toDateString()}.
+        The current year is ${new Date().getFullYear()}.
+        
+        Rules:
+        1. Extract event details into JSON.
+        2. 'start' and 'end' MUST be valid ISO 8601 strings (e.g., "2024-01-01T14:00:00").
+        3. If no end time is specified, assume 1 hour duration.
+        4. If no date is specified, assume tomorrow.
+        5. Infer relative dates (e.g., "next Friday") from the current date.
+        `
     })
 
     useEffect(() => {

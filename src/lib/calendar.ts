@@ -24,7 +24,7 @@ export const getAuthToken = (): Promise<string> => {
     })
 }
 
-export const createEvent = async (event: CalendarEvent) => {
+export const createEventDirect = async (event: CalendarEvent) => {
     const token = await getAuthToken()
 
     const response = await fetch(
@@ -45,4 +45,21 @@ export const createEvent = async (event: CalendarEvent) => {
     }
 
     return response.json()
+}
+
+export const createEvent = async (event: CalendarEvent) => {
+    return new Promise((resolve, reject) => {
+        chrome.runtime.sendMessage(
+            { type: "CREATE_EVENT", payload: event },
+            (response) => {
+                if (chrome.runtime.lastError) {
+                    reject(chrome.runtime.lastError)
+                } else if (response.error) {
+                    reject(new Error(response.error))
+                } else {
+                    resolve(response.data)
+                }
+            }
+        )
+    })
 }

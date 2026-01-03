@@ -1,19 +1,21 @@
 import { useState, useEffect } from "react"
 import { CalendarPlus, X, Mic, Send, Check, Loader2, RefreshCcw, Download } from "lucide-react"
-import { useStructuredPrompt } from "@ahnopologetic/use-prompt-api/react"
-import { z } from "zod"
+import { usePromptAPI } from "@ahnopologetic/use-prompt-api/react"
 
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
 import { createEvent, type CalendarEvent } from "../lib/calendar"
 import "../style.css"
 
-const eventSchema = z.object({
-    title: z.string(),
-    start: z.string().describe("ISO 8601 string, e.g. 2024-01-01T12:00:00"),
-    end: z.string().describe("ISO 8601 string"),
-    location: z.string().optional(),
-    description: z.string().optional()
-})
+// Move schema to a constant string for the prompt
+const SCHEMA_DEF = `
+{
+  "title": "string",
+  "start": "ISO 8601 string (e.g., 2024-01-01T10:00:00)",
+  "end": "ISO 8601 string",
+  "location": "string (optional)",
+  "description": "string (optional)"
+}
+`
 
 export default function CalendarOverlay() {
     const [isOpen, setIsOpen] = useState(false)
@@ -29,9 +31,24 @@ export default function CalendarOverlay() {
 
     const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition()
 
-    const { prompt, ready, loading: aiLoading } = useStructuredPrompt({
-        schema: eventSchema,
-        systemPrompt: `You are a helpful calendar assistant. The current time is ${new Date().toISOString()}.`
+    // SWITCH TO BASIC HOOK
+    const { prompt, ready } = usePromptAPI({
+        systemPrompt: `You are a helpful calendar assistant. 
+        The current time and timezone is ${new Date().toTimeString()}.
+        The current date is ${new Date().toDateString()}.
+        The current year is ${new Date().getFullYear()}.
+        
+        INSTRUCTIONS:
+        1. Extract event details from the user's request.
+        2. Respond ONLY with valid JSON matching this structure:
+        ${SCHEMA_DEF}
+        3. Rules:
+           - 'start' and 'end' MUST be valid ISO 8601 strings.
+           - If no end time, assume 1 hour.
+           - If no date, assume tomorrow.
+           - Infer relative dates from today.
+           - Do not add any markdown formatting (no \`\`\`json). Just the raw JSON string.
+        `
     })
 
     useEffect(() => {
@@ -90,21 +107,40 @@ export default function CalendarOverlay() {
         setErrorMessage("")
 
         try {
-            const result = await prompt(`Create an event plan for: ${textInput}`)
+            const rawResult = await prompt(`User Request: ${textInput}`)
+            console.log("Raw Model Output:", rawResult)
+
+            // clean up markdown if present
+            const cleanJson = rawResult.replace(/```json\n?|\n?```/g, "").trim()
+            const result = JSON.parse(cleanJson)
+
+            // Validate basic structure
+            if (!result.title || !result.start || !result.end) {
+                throw new Error("Invalid parameters generated")
+            }
+
+            const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 
             const event: CalendarEvent = {
                 summary: result.title,
                 description: result.description,
                 location: result.location,
-                start: { dateTime: result.start },
-                end: { dateTime: result.end }
+                start: {
+                    dateTime: result.start,
+                    timeZone: timeZone
+                },
+                end: {
+                    dateTime: result.end,
+                    timeZone: timeZone
+                }
             }
 
             setGeneratedEvent(event)
             setStatus("review")
         } catch (e) {
+            console.error(e)
             setStatus("error")
-            setErrorMessage(e.message)
+            setErrorMessage("Failed to parse event. Please try again.")
         }
     }
 
@@ -275,7 +311,7 @@ export default function CalendarOverlay() {
                 </div>
             )}
 
-            {/* Toggle Button */}
+            {/* Floating Trigger Button */}
             {!isOpen && (
                 <button
                     onClick={toggleOverlay}
