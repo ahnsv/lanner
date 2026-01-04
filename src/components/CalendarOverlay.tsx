@@ -70,10 +70,16 @@ export default function CalendarOverlay() {
     }, [transcript, resetTranscript])
 
     const checkCapabilities = async () => {
+        if (!LanguageModel) {
+            console.error("LanguageModel not available")
+            setCapabilityStatus("unavailable")
+            return
+        }
         try {
-            const availability = await (window as any).ai.languageModel.availability()
+            const availability = await LanguageModel.availability()
             setCapabilityStatus(availability)
         } catch (e) {
+            console.log({ e })
             setCapabilityStatus("unknown")
         }
     }
@@ -81,7 +87,7 @@ export default function CalendarOverlay() {
     const handleDownloadModel = async () => {
         setIsDownloading(true)
         try {
-            await (window as any).ai.languageModel.create({
+            await LanguageModel.create({
                 monitor(m: any) {
                     m.addEventListener("downloadprogress", (e: any) => {
                         console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`)
@@ -114,7 +120,7 @@ export default function CalendarOverlay() {
 
         try {
             const rawResult = await prompt(`User Request: ${textInput}`)
-            console.log("Raw Model Output:", rawResult)
+            console.debug("Raw Model Output:", rawResult)
 
             // clean up markdown if present
             const cleanJson = rawResult.replace(/```json\n?|\n?```/g, "").trim()

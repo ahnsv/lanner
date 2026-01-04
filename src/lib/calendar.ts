@@ -12,6 +12,7 @@ export interface CalendarEvent {
     }
 }
 
+const LANNER_PREFIX = '📔 '
 export const getAuthToken = (): Promise<string> => {
     return new Promise((resolve, reject) => {
         chrome.identity.getAuthToken({ interactive: true }, (token) => {
@@ -26,6 +27,10 @@ export const getAuthToken = (): Promise<string> => {
 
 export const createEventDirect = async (event: CalendarEvent) => {
     const token = await getAuthToken()
+    const modifiedEvent = {
+        ...event,
+        summary: LANNER_PREFIX + event.summary,
+    }
 
     const response = await fetch(
         "https://www.googleapis.com/calendar/v3/calendars/primary/events",
@@ -35,12 +40,13 @@ export const createEventDirect = async (event: CalendarEvent) => {
                 Authorization: `Bearer ${token}`,
                 "Content-Type": "application/json",
             },
-            body: JSON.stringify(event),
+            body: JSON.stringify(modifiedEvent),
         }
     )
 
     if (!response.ok) {
         const error = await response.json()
+        console.error({ error })
         throw new Error(error.error?.message || "Failed to create event")
     }
 

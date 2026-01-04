@@ -174,7 +174,7 @@ function IndexPopup() {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.3 }}
-      className="w-[500px] bg-[#0a0a0a] min-h-[300px] text-white p-0 font-sans overflow-hidden"
+      className="w-[500px] bg-[#0a0a0a] min-h-[300px] text-white p-0 font-sans overflow-hidden flex flex-col"
     >
       {/* Header - Minimal */}
       <div className="flex items-center justify-between px-6 pt-5 pb-2 border-b border-white/5 bg-[#0a0a0a] sticky top-0 z-10">

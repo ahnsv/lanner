@@ -4,11 +4,17 @@
 @tailwind components;
 @tailwind utilities;
 
-#plasmo-shadow-container,
-#lanner-popup-root {
+#plasmo-shadow-container {
   all: initial;
+  display: block;
   box-sizing: border-box;
   font-family: "Inter Tight", sans-serif;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: #0a0a0a;
 }
 
 #plasmo-shadow-container *,
