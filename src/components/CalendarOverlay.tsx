@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { useSpeechRecognition } from "../hooks/useSpeechRecognition"
 import { createEvent, type CalendarEvent } from "../lib/calendar"
 import { LannerAILogo } from "./LannerAILogo"
+import { ModelDownloadStatus } from "./ModelDownloadStatus"
 
 
 // Move schema to a constant string for the prompt
@@ -28,18 +29,12 @@ export default function CalendarOverlay() {
     const [textInput, setTextInput] = useState("")
     const [generatedEvents, setGeneratedEvents] = useState<CalendarEvent[]>([])
 
-    // Status can include specific count if needed, but for now simple
     const [status, setStatus] = useState<"idle" | "generating" | "review" | "creating" | "success" | "error">("idle")
     const [errorMessage, setErrorMessage] = useState("")
 
-    // Model download states
-    const [capabilityStatus, setCapabilityStatus] = useState<string>("unknown")
-    const [downloadProgress, setDownloadProgress] = useState<number>(0)
-    const [isDownloading, setIsDownloading] = useState(false)
-
     const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition()
 
-    const { prompt, ready } = usePromptAPI({
+    const { prompt, ready, availability } = usePromptAPI({
         systemPrompt: `You are a helpful calendar assistant. 
         The current time and timezone is ${new Date().toTimeString()}.
         The current date is ${new Date().toDateString()}.
@@ -57,10 +52,6 @@ export default function CalendarOverlay() {
         `
     })
 
-    useEffect(() => {
-        checkCapabilities()
-    }, [])
-
     // Sync speech transcript to text input
     useEffect(() => {
         if (transcript) {
@@ -69,47 +60,11 @@ export default function CalendarOverlay() {
         }
     }, [transcript, resetTranscript])
 
-    const checkCapabilities = async () => {
-        if (!LanguageModel) {
-            console.error("LanguageModel not available")
-            setCapabilityStatus("unavailable")
-            return
-        }
-        try {
-            const availability = await LanguageModel.availability()
-            setCapabilityStatus(availability)
-        } catch (e) {
-            console.log({ e })
-            setCapabilityStatus("unknown")
-        }
-    }
-
-    const handleDownloadModel = async () => {
-        setIsDownloading(true)
-        try {
-            await LanguageModel.create({
-                monitor(m: any) {
-                    m.addEventListener("downloadprogress", (e: any) => {
-                        console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`)
-                        setDownloadProgress(e.loaded / e.total)
-                    })
-                },
-            })
-            setCapabilityStatus("readily")
-        } catch (e: any) {
-            setErrorMessage(`Download failed: ${e.message}`)
-            setStatus("error")
-        } finally {
-            setIsDownloading(false)
-        }
-    }
-
     const toggleOverlay = () => {
         setIsOpen(!isOpen)
         if (!isOpen) {
             setGeneratedEvents([])
             setStatus("idle")
-            checkCapabilities() // Re-check on open
         }
     }
 
@@ -213,51 +168,17 @@ export default function CalendarOverlay() {
                         </div>
 
                         <div className="p-6 pt-2">
-                            {/* Capability Check / Download View */}
+                            {/*  Download View */}
                             <AnimatePresence mode="wait">
-                                {capabilityStatus !== "available" && capabilityStatus !== "readily" && capabilityStatus !== "unknown" ? (
+                                {availability !== "available" ? (
                                     <motion.div
                                         key="download"
                                         initial={{ opacity: 0, y: 10 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, y: -10 }}
                                         transition={{ duration: 0.2 }}
-                                        className="flex flex-col items-center text-center py-6 space-y-4"
                                     >
-                                        <div className="p-4 bg-white/5 rounded-full ring-1 ring-white/10">
-                                            <Download size={24} className="text-blue-400" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h3 className="font-semibold text-white tracking-tight">
-                                                {capabilityStatus === "no" ? "Model Not Available" : "AI Model Needed"}
-                                            </h3>
-                                            <p className="text-sm text-gray-400 max-w-xs mx-auto">
-                                                {capabilityStatus === "no"
-                                                    ? "The model is not available in your browser."
-                                                    : "A small AI model needs to be downloaded to your browser."}
-                                            </p>
-                                        </div>
-
-                                        {isDownloading ? (
-                                            <div className="w-full max-w-xs space-y-2">
-                                                <div className="bg-white/10 rounded-full h-1 w-full overflow-hidden">
-                                                    <div
-                                                        className="bg-blue-500 h-full rounded-full transition-all duration-300"
-                                                        style={{ width: `${downloadProgress * 100}%` }}
-                                                    ></div>
-                                                </div>
-                                                <p className="text-[10px] text-gray-500 font-mono text-right">
-                                                    {Math.round(downloadProgress * 100)}%
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                onClick={handleDownloadModel}
-                                                className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-xl font-medium transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-                                            >
-                                                Download Model
-                                            </button>
-                                        )}
+                                        <ModelDownloadStatus availability={availability} />
                                     </motion.div>
                                 ) : (status === "idle" || status === "generating" || status === "error" ? (
                                     <motion.div
