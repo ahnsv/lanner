@@ -1,9 +1,11 @@
 import { usePromptAPI } from "@ahnopologetic/use-prompt-api/react"
 import { AnimatePresence, motion } from "framer-motion"
-import { Calendar, Check, Download, Loader2, Mic, RefreshCcw, Send } from "lucide-react"
+import { Calendar, Check, Loader2, Mic, RefreshCcw, Send } from "lucide-react"
 import { useEffect, useState } from "react"
 
 import { LannerAILogo } from "~components/LannerAILogo"
+import { ModelDownloadStatus } from "~components/ModelDownloadStatus"
+import { AIModelAvailability, normalizeAvailability } from "~lib/ai"
 import { useSpeechRecognition } from "./hooks/useSpeechRecognition"
 import { createEvent, type CalendarEvent } from "./lib/calendar"
 import "./style.css"
@@ -32,9 +34,7 @@ function IndexPopup() {
   const [errorMessage, setErrorMessage] = useState("")
 
   // Model download states
-  const [capabilityStatus, setCapabilityStatus] = useState<string>("unknown")
-  const [downloadProgress, setDownloadProgress] = useState<number>(0)
-  const [isDownloading, setIsDownloading] = useState(false)
+  const [capabilityStatus, setCapabilityStatus] = useState<AIModelAvailability>(AIModelAvailability.UNKNOWN)
 
   const { isListening, transcript, startListening, stopListening, resetTranscript } = useSpeechRecognition()
 
@@ -69,31 +69,15 @@ function IndexPopup() {
   }, [transcript, resetTranscript])
 
   const checkCapabilities = async () => {
+    if (typeof LanguageModel === "undefined") {
+      setCapabilityStatus(AIModelAvailability.NOT_SUPPORTED)
+      return
+    }
     try {
       const availability = await LanguageModel.availability()
-      setCapabilityStatus(availability)
+      setCapabilityStatus(normalizeAvailability(availability))
     } catch (e) {
-      setCapabilityStatus("unknown")
-    }
-  }
-
-  const handleDownloadModel = async () => {
-    setIsDownloading(true)
-    try {
-      await LanguageModel.create({
-        monitor(m: any) {
-          m.addEventListener("downloadprogress", (e: any) => {
-            console.log(`Downloaded ${e.loaded} of ${e.total} bytes.`)
-            setDownloadProgress(e.loaded / e.total)
-          })
-        },
-      })
-      setCapabilityStatus("readily")
-    } catch (e: any) {
-      setErrorMessage(`Download failed: ${e.message}`)
-      setStatus("error")
-    } finally {
-      setIsDownloading(false)
+      setCapabilityStatus(AIModelAvailability.NOT_SUPPORTED)
     }
   }
 
@@ -188,49 +172,15 @@ function IndexPopup() {
       <div className="p-6 pt-2">
         {/* Capability Check / Download View */}
         <AnimatePresence mode="wait">
-          {capabilityStatus !== "available" && capabilityStatus !== "readily" && capabilityStatus !== "unknown" ? (
+          {capabilityStatus !== AIModelAvailability.AVAILABLE ? (
             <motion.div
               key="download"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
               transition={{ duration: 0.2 }}
-              className="flex flex-col items-center text-center py-6 space-y-4"
             >
-              <div className="p-4 bg-white/5 rounded-full ring-1 ring-white/10">
-                <Download size={24} className="text-blue-400" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="font-semibold text-white tracking-tight">
-                  {capabilityStatus === "no" ? "Model Not Available" : "AI Model Needed"}
-                </h3>
-                <p className="text-sm text-gray-400 max-w-xs mx-auto">
-                  {capabilityStatus === "no"
-                    ? "The model is not available in your browser."
-                    : "A small AI model needs to be downloaded to your browser."}
-                </p>
-              </div>
-
-              {isDownloading ? (
-                <div className="w-full max-w-xs space-y-2">
-                  <div className="bg-white/10 rounded-full h-1 w-full overflow-hidden">
-                    <div
-                      className="bg-blue-500 h-full rounded-full transition-all duration-300"
-                      style={{ width: `${downloadProgress * 100}%` }}
-                    ></div>
-                  </div>
-                  <p className="text-[10px] text-gray-500 font-mono text-right">
-                    {Math.round(downloadProgress * 100)}%
-                  </p>
-                </div>
-              ) : (
-                <button
-                  onClick={handleDownloadModel}
-                  className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded-xl font-medium transition-all shadow-lg shadow-blue-900/20 active:scale-95"
-                >
-                  Download Model
-                </button>
-              )}
+              <ModelDownloadStatus availability={capabilityStatus} />
             </motion.div>
           ) : (status === "idle" || status === "generating" || status === "error" ? (
             <motion.div
