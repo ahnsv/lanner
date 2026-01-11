@@ -42,7 +42,7 @@
       "https://calendar.google.com/*"
     ],
     "oauth2": {
-      "client_id": "886267481884-3dotgul4m3tq0bvke76cl9qguruem644.apps.googleusercontent.com",
+      "client_id": "886267481884-ngvqej90a577f8scro0jggfpdq6n8f88.apps.googleusercontent.com",
       "scopes": [
         "https://www.googleapis.com/auth/calendar.events"
       ]

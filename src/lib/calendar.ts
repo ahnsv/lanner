@@ -20,6 +20,23 @@ interface TokenCache {
     timestamp: number
 }
 
+const validateToken = async (token: string): Promise<boolean> => {
+    try {
+        const response = await fetch(
+            "https://www.googleapis.com/calendar/v3/calendars/primary/events?maxResults=1",
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        )
+        return response.ok
+    } catch (e) {
+        console.warn("Token validation failed", e)
+        return false
+    }
+}
+
 export const getAuthToken = async (interactive: boolean = true): Promise<string> => {
     // 1. Check Cache
     const cache = await chrome.storage.local.get(TOKEN_CACHE_KEY)
@@ -36,22 +53,58 @@ export const getAuthToken = async (interactive: boolean = true): Promise<string>
 
     // 2. Fetch New Token
     if (typeof chrome.identity !== "undefined") {
-        return new Promise((resolve, reject) => {
-            chrome.identity.getAuthToken({ interactive }, (token) => {
-                if (chrome.runtime.lastError || !token) {
-                    reject(chrome.runtime.lastError?.message || "No token received")
+        const getToken = (isInteractive: boolean): Promise<string> => {
+            return new Promise((resolve, reject) => {
+                chrome.identity.getAuthToken({ interactive: isInteractive }, (token) => {
+                    if (chrome.runtime.lastError || !token) {
+                        reject(chrome.runtime.lastError?.message || "No token received")
+                    } else {
+                        resolve(token)
+                    }
+                })
+            })
+        }
+
+        try {
+            let token = await getToken(interactive)
+            
+            // Validate the token to ensure we have correct permissions
+            let isValid = await validateToken(token)
+
+            if (!isValid) {
+                console.warn("Token invalid, removing from cache and retrying if interactive")
+                
+                // Remove invalid token from identity cache
+                await new Promise<void>((resolve) => {
+                    chrome.identity.removeCachedAuthToken({ token }, () => resolve())
+                })
+
+                if (interactive) {
+                    // Retry with interactive flow
+                    token = await getToken(true)
+                    isValid = await validateToken(token)
+                    if (!isValid) {
+                         throw new Error("Token still invalid after refresh")
+                    }
                 } else {
-                    // Cache the new token
-                    chrome.storage.local.set({
-                        [TOKEN_CACHE_KEY]: {
-                            token,
-                            timestamp: Date.now()
-                        }
-                    })
-                    resolve(token)
+                     throw new Error("Token invalid")
+                }
+            }
+
+            // Cache the new validated token
+            await chrome.storage.local.set({
+                [TOKEN_CACHE_KEY]: {
+                    token,
+                    timestamp: Date.now()
                 }
             })
-        })
+            return token
+
+        } catch (e) {
+            // Propagate error
+            throw e
+        }
+
     } else {
         // Fallback: Delegate to Background Script (e.g. from Content Script)
         return new Promise((resolve, reject) => {
